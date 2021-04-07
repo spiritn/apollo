@@ -7,12 +7,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.springframework.stereotype.Component;
+
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.springframework.stereotype.Component;
 
 @Component
 public class BizConfig extends RefreshableConfig {
@@ -61,6 +62,7 @@ public class BizConfig extends RefreshableConfig {
   }
 
   public long longPollingTimeoutInMilli() {
+    // 长轮询的时间，默认60s
     int timeout = getIntProperty("long.polling.timeout", DEFAULT_LONG_POLLING_TIMEOUT);
     // java client's long polling timeout is 90 seconds, so server side long polling timeout must be less than 90
     return 1000 * checkInt(timeout, 1, 90, DEFAULT_LONG_POLLING_TIMEOUT);

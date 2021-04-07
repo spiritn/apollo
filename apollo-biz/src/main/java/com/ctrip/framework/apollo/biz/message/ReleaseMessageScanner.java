@@ -1,16 +1,5 @@
 package com.ctrip.framework.apollo.biz.message;
 
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.CollectionUtils;
-
 import com.ctrip.framework.apollo.biz.config.BizConfig;
 import com.ctrip.framework.apollo.biz.entity.ReleaseMessage;
 import com.ctrip.framework.apollo.biz.repository.ReleaseMessageRepository;
@@ -18,6 +7,16 @@ import com.ctrip.framework.apollo.core.utils.ApolloThreadFactory;
 import com.ctrip.framework.apollo.tracer.Tracer;
 import com.ctrip.framework.apollo.tracer.spi.Transaction;
 import com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
@@ -39,10 +38,15 @@ public class ReleaseMessageScanner implements InitializingBean {
         .create("ReleaseMessageScanner", true));
   }
 
+  /**
+   * 启动时来初始化 定时任务 使用这个ScheduledExecutorService线程池
+   */
   @Override
   public void afterPropertiesSet() throws Exception {
+    // 扫描间隔可以配置，默认1000毫秒
     databaseScanInterval = bizConfig.releaseMessageScanIntervalInMilli();
     maxIdScanned = loadLargestMessageId();
+    // 利用ScheduledExecutorService线程池 注册一个定时任务，每秒去扫描ReleaseMessage表
     executorService.scheduleWithFixedDelay((Runnable) () -> {
       Transaction transaction = Tracer.newTransaction("Apollo.ReleaseMessageScanner", "scanMessage");
       try {
@@ -90,7 +94,10 @@ public class ReleaseMessageScanner implements InitializingBean {
     if (CollectionUtils.isEmpty(releaseMessages)) {
       return false;
     }
+    // 通知监听者去处理
     fireMessageScanned(releaseMessages);
+
+    // maxIdScanned应该表示每次处理到哪里了，表更新记录可能很多大于500条
     int messageScanned = releaseMessages.size();
     maxIdScanned = releaseMessages.get(messageScanned - 1).getId();
     return messageScanned == 500;
@@ -106,6 +113,7 @@ public class ReleaseMessageScanner implements InitializingBean {
   }
 
   /**
+   * 观察者模式，扫描到新的ReleaseMessage通知监听者去处理
    * Notify listeners with messages loaded
    * @param messages
    */

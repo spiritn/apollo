@@ -39,6 +39,10 @@ public class DatabaseMessageSender implements MessageSender {
     this.releaseMessageRepository = releaseMessageRepository;
   }
 
+  /**
+   * 发布配置后，调用此方法保存到ReleaseMessage表中
+   * 很多地方都调用了此方法
+   */
   @Override
   @Transactional
   public void sendMessage(String message, String channel) {

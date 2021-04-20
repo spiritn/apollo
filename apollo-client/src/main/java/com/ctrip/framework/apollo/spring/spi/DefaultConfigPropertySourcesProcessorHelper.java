@@ -6,11 +6,12 @@ import com.ctrip.framework.apollo.spring.annotation.ApolloJsonValueProcessor;
 import com.ctrip.framework.apollo.spring.annotation.SpringValueProcessor;
 import com.ctrip.framework.apollo.spring.property.SpringValueDefinitionProcessor;
 import com.ctrip.framework.apollo.spring.util.BeanRegistrationUtil;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DefaultConfigPropertySourcesProcessorHelper implements ConfigPropertySourcesProcessorHelper {
 
@@ -20,6 +21,7 @@ public class DefaultConfigPropertySourcesProcessorHelper implements ConfigProper
     // to make sure the default PropertySourcesPlaceholderConfigurer's priority is higher than PropertyPlaceholderConfigurer
     propertySourcesPlaceholderPropertyValues.put("order", 0);
 
+    // 这里注册了四个BeanDefinition
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, PropertySourcesPlaceholderConfigurer.class.getName(),
         PropertySourcesPlaceholderConfigurer.class, propertySourcesPlaceholderPropertyValues);
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, ApolloAnnotationProcessor.class.getName(),

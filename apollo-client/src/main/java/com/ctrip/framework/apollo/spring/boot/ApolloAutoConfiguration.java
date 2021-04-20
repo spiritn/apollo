@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+// 所以实际的项目都要开启apollo.bootstrap.enabled=true
 @ConditionalOnProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED)
 @ConditionalOnMissingBean(PropertySourcesProcessor.class)
 public class ApolloAutoConfiguration {

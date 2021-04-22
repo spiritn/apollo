@@ -68,11 +68,17 @@ public class BizConfig extends RefreshableConfig {
     return 1000 * checkInt(timeout, 1, 90, DEFAULT_LONG_POLLING_TIMEOUT);
   }
 
+  /**
+   * 配置项key的长度限制 128个字符
+   */
   public int itemKeyLengthLimit() {
     int limit = getIntProperty("item.key.length.limit", DEFAULT_ITEM_KEY_LENGTH);
     return checkInt(limit, 5, Integer.MAX_VALUE, DEFAULT_ITEM_KEY_LENGTH);
   }
 
+  /**
+   * 配置项value的长度限制 20000个字符
+   */
   public int itemValueLengthLimit() {
     int limit = getIntProperty("item.value.length.limit", DEFAULT_ITEM_VALUE_LENGTH);
     return checkInt(limit, 5, Integer.MAX_VALUE, DEFAULT_ITEM_VALUE_LENGTH);

@@ -67,6 +67,9 @@ public class DatabaseMessageSender implements MessageSender {
     }
   }
 
+  /**
+   * 这里初始化了一个线程池，
+   */
   @PostConstruct
   private void initialize() {
     cleanExecutorService.submit(() -> {
@@ -74,6 +77,7 @@ public class DatabaseMessageSender implements MessageSender {
         try {
           Long rm = toClean.poll(1, TimeUnit.SECONDS);
           if (rm != null) {
+            // 每隔5秒去清空一次ReleaseMessage表
             cleanMessage(rm);
           } else {
             TimeUnit.SECONDS.sleep(5);

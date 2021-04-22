@@ -3,5 +3,4 @@ apollo:
     enabled: true
     # will inject 'application' and 'TEST1.apollo' namespaces in bootstrap phase
     namespaces: application
-server:
-  port: 8089
+

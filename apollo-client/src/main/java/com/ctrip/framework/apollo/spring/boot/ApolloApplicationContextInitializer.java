@@ -23,6 +23,7 @@ import java.util.List;
 
 /**
  * Initialize apollo system properties and inject the Apollo config in Spring Boot bootstrap phase
+ * 在容器启动阶段 初始化apollo系统属性和注入配置文件值
  *
  * <p>Configuration example:</p>
  * <pre class="code">
@@ -62,6 +63,8 @@ public class ApolloApplicationContextInitializer implements
 
     private static final Logger logger = LoggerFactory.getLogger(ApolloApplicationContextInitializer.class);
     private static final Splitter NAMESPACE_SPLITTER = Splitter.on(",").omitEmptyStrings().trimResults();
+
+    // 这些属性都属于apollo系统属性
     private static final String[] APOLLO_SYSTEM_PROPERTIES = {"app.id", ConfigConsts.APOLLO_CLUSTER_KEY,
             "apollo.cacheDir", "apollo.accesskey.secret", ConfigConsts.APOLLO_META_KEY, PropertiesFactory.APOLLO_PROPERTY_ORDER_ENABLE};
 
@@ -130,7 +133,7 @@ public class ApolloApplicationContextInitializer implements
             return;
         }
 
-        // 从environment中把值填充进SystemProperty，为啥呢，直接从environment获取不好吗
+        // 从环境变量environment中把值填充进SystemProperty，为啥呢，直接从environment获取不好吗
         String propertyValue = environment.getProperty(propertyName);
 
         if (Strings.isNullOrEmpty(propertyValue)) {
@@ -141,9 +144,9 @@ public class ApolloApplicationContextInitializer implements
     }
 
     /**
-     * 上面的initialize方法是在容器启动完成后去加载属性文件，本方法实际是postProcessEnvironment处理器，
-     * 可以在容器启动前处理Environment，比较急切，所以也就实现了在日志系统加载前就先执行
-     *
+     * 本方法是postProcessEnvironment处理器，比上面的initialize方法先执行
+     * 是在容器启动前执行处理Environment，比较急切，所以也就实现了在日志系统加载前就先执行
+     * <p>
      * In order to load Apollo configurations as early as even before Spring loading logging system phase,
      * this EnvironmentPostProcessor can be called Just After ConfigFileApplicationListener has succeeded.
      * <p>
@@ -157,23 +160,22 @@ public class ApolloApplicationContextInitializer implements
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment configurableEnvironment, SpringApplication springApplication) {
 
+        // 因为是在容器未完全启动结束时执行本方法，所以需要先把一些apollo必需的属性先加载进来
         // should always initialize system properties like app.id in the first place
         initializeSystemProperty(configurableEnvironment);
 
-        // 开启apollo.bootstrap.eagerLoad.enabled = true可以在日志系统加载之前就注入属性值
+        // 如果开启了apollo.bootstrap.eagerLoad.enabled = true就先去执行initialize方法初始化apollo配置，（可实现在日志系统加载之前就注入属性值）
         Boolean eagerLoadEnabled = configurableEnvironment.getProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_EAGER_LOAD_ENABLED, Boolean.class, false);
-
         //EnvironmentPostProcessor should not be triggered if you don't want Apollo Loading before Logging System Initialization
+        // 如果没有开启，就不先执行initialize方法了
         if (!eagerLoadEnabled) {
             return;
         }
 
         Boolean bootstrapEnabled = configurableEnvironment.getProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED, Boolean.class, false);
-
         if (bootstrapEnabled) {
             initialize(configurableEnvironment);
         }
-
     }
 
     /**

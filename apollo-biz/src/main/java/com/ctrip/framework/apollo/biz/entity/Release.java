@@ -18,9 +18,13 @@ import javax.persistence.Table;
 @SQLDelete(sql = "Update Release set isDeleted = 1 where id = ?")
 @Where(clause = "isDeleted = 0")
 public class Release extends BaseEntity {
+
   @Column(name = "ReleaseKey", nullable = false)
   private String releaseKey;
 
+  /**
+   * 格式如20210416180500-release
+   */
   @Column(name = "Name", nullable = false)
   private String name;
 
@@ -33,6 +37,10 @@ public class Release extends BaseEntity {
   @Column(name = "NamespaceName", nullable = false)
   private String namespaceName;
 
+  /**
+   * 存的是每次修改的item的json
+   *
+   * */
   @Column(name = "Configurations", nullable = false)
   @Lob
   private String configurations;
@@ -40,6 +48,9 @@ public class Release extends BaseEntity {
   @Column(name = "Comment", nullable = false)
   private String comment;
 
+  /**
+   * 是否被回滚
+   */
   @Column(name = "IsAbandoned", columnDefinition = "Bit default '0'")
   private boolean isAbandoned;
 

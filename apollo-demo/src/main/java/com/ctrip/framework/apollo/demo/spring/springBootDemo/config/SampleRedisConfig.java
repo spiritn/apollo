@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -51,7 +52,7 @@ import java.util.Map;
 @ConditionalOnProperty("redis.cache.enabled")
 @ConfigurationProperties(prefix = "redis.cache")
 @Component("sampleRedisConfig")
-// @RefreshScope
+@RefreshScope
 public class SampleRedisConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SampleRedisConfig.class);

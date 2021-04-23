@@ -45,6 +45,7 @@ public class ReleaseMessageScanner implements InitializingBean {
   public void afterPropertiesSet() throws Exception {
     // 扫描间隔可以配置，默认1000毫秒
     databaseScanInterval = bizConfig.releaseMessageScanIntervalInMilli();
+    // 获得最大的 ReleaseMessage 的编号
     maxIdScanned = loadLargestMessageId();
     // 利用ScheduledExecutorService线程池 注册一个定时任务，每秒去扫描ReleaseMessage表
     executorService.scheduleWithFixedDelay((Runnable) () -> {

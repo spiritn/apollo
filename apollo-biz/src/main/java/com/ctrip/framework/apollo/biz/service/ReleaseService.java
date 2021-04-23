@@ -167,7 +167,7 @@ public class ReleaseService {
         // 去item表里获取所有修改的配置项
         Map<String, String> operateNamespaceItems = getNamespaceItems(namespace);
 
-        // 这里的parentNamespace应该是去找关联的namespace
+        // 这里的parentNamespace是灰度发布相关的
         Namespace parentNamespace = namespaceService.findParentNamespace(namespace);
         //branch release
         if (parentNamespace != null) {

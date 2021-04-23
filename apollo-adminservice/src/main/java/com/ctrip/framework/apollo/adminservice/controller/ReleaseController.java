@@ -120,6 +120,7 @@ public class ReleaseController {
         Namespace parentNamespace = namespaceService.findParentNamespace(namespace);
         String messageCluster;
         if (parentNamespace != null) {
+            // 灰度发布
             messageCluster = parentNamespace.getClusterName();
         } else {
             messageCluster = clusterName;

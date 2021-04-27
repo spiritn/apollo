@@ -16,14 +16,7 @@ import com.ctrip.framework.apollo.core.utils.ApolloThreadFactory;
 import com.ctrip.framework.apollo.tracer.Tracer;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultimap;
+import com.google.common.collect.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.slf4j.Logger;
@@ -38,11 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
 import java.lang.reflect.Type;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +44,8 @@ import java.util.function.Function;
 @RequestMapping("/notifications/v2")
 public class NotificationControllerV2 implements ReleaseMessageListener {
   private static final Logger logger = LoggerFactory.getLogger(NotificationControllerV2.class);
+
+  //
   private final Multimap<String, DeferredResultWrapper> deferredResults =
       Multimaps.synchronizedSetMultimap(TreeMultimap.create(String.CASE_INSENSITIVE_ORDER, Ordering.natural()));
   private static final Splitter STRING_SPLITTER =
@@ -63,6 +54,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
       new TypeToken<List<ApolloConfigNotification>>() {
       }.getType();
 
+  // 这里又有一个定时任务线程池
   private final ExecutorService largeNotificationBatchExecutorService;
 
   private final WatchKeysUtil watchKeysUtil;
@@ -100,8 +92,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     List<ApolloConfigNotification> notifications = null;
 
     try {
-      notifications =
-          gson.fromJson(notificationsAsString, notificationsTypeReference);
+      notifications = gson.fromJson(notificationsAsString, notificationsTypeReference);
     } catch (Throwable ex) {
       Tracer.logError(ex);
     }
@@ -112,9 +103,11 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
 
     DeferredResultWrapper deferredResultWrapper = new DeferredResultWrapper(bizConfig.longPollingTimeoutInMilli());
     Set<String> namespaces = Sets.newHashSet();
-    Map<String, Long> clientSideNotifications = Maps.newHashMap();
-    Map<String, ApolloConfigNotification> filteredNotifications = filterNotifications(appId, notifications);
 
+    // 保存<Namespace, messageId>
+    Map<String, Long> clientSideNotifications = Maps.newHashMap();
+    // 一个AppId会申请多个namespace的配置，这里循环加到clientSideNotifications里
+    Map<String, ApolloConfigNotification> filteredNotifications = filterNotifications(appId, notifications);
     for (Map.Entry<String, ApolloConfigNotification> notificationEntry : filteredNotifications.entrySet()) {
       String normalizedNamespace = notificationEntry.getKey();
       ApolloConfigNotification notification = notificationEntry.getValue();
@@ -142,6 +135,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     deferredResultWrapper
           .onTimeout(() -> logWatchedKeys(watchedKeys, "Apollo.LongPoll.TimeOutKeys"));
 
+    // 注册异步线程完成时要执行的代码
     deferredResultWrapper.onCompletion(() -> {
       //unregister all keys
       for (String key : watchedKeys) {
@@ -166,6 +160,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
         releaseMessageService.findLatestReleaseMessagesGroupByMessages(watchedKeys);
 
     /**
+     * 手动关闭数据库连接，这里已经不再需要数据库连接了
      * Manually close the entity manager.
      * Since for async request, Spring won't do so until the request is finished,
      * which is unacceptable since we are doing long polling - means the db connection would be hold
@@ -173,10 +168,9 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
      */
     entityManagerUtil.closeEntityManager();
 
+    // 调用此方法时立即返回响应
     List<ApolloConfigNotification> newNotifications =
-        getApolloConfigNotifications(namespaces, clientSideNotifications, watchedKeysMap,
-            latestReleaseMessages);
-
+        getApolloConfigNotifications(namespaces, clientSideNotifications, watchedKeysMap, latestReleaseMessages);
     if (!CollectionUtils.isEmpty(newNotifications)) {
       deferredResultWrapper.setResult(newNotifications);
     }
@@ -232,6 +226,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
             latestId = namespaceNotificationId;
           }
         }
+        // 若服务器的通知编号大于客户端的通知编号，意味着有配置更新
         if (latestId > clientSideId) {
           ApolloConfigNotification notification = new ApolloConfigNotification(namespace, latestId);
           namespaceWatchedKeys.stream().filter(latestNotifications::containsKey).forEach(namespaceWatchedKey ->
@@ -260,6 +255,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
       return;
     }
 
+    // 如果deferredResults不包含此message，直接返回
     if (!deferredResults.containsKey(content)) {
       return;
     }
@@ -270,7 +266,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     ApolloConfigNotification configNotification = new ApolloConfigNotification(changedNamespace, message.getId());
     configNotification.addMessage(content, message.getId());
 
-    //do async notification if too many clients
+    //do async notification if too many clients， default 500
     if (results.size() > bizConfig.releaseMessageNotificationBatch()) {
       largeNotificationBatchExecutorService.submit(() -> {
         logger.debug("Async notify {} clients for key {} with batch {}", results.size(), content,

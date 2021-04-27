@@ -21,6 +21,8 @@ public class DeferredResultWrapper implements Comparable<DeferredResultWrapper> 
       NOT_MODIFIED_RESPONSE_LIST = new ResponseEntity<>(HttpStatus.NOT_MODIFIED);
 
   private Map<String, String> normalizedNamespaceNameToOriginalNamespaceName;
+
+  // 这个是最重要的，利用了Spring的DeferredResult
   private DeferredResult<ResponseEntity<List<ApolloConfigNotification>>> result;
 
 

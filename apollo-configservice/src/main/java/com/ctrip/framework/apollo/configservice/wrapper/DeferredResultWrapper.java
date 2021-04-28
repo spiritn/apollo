@@ -60,7 +60,7 @@ public class DeferredResultWrapper implements Comparable<DeferredResultWrapper> 
           (notification.getNamespaceName())).forEach(notification -> notification.setNamespaceName(
               normalizedNamespaceNameToOriginalNamespaceName.get(notification.getNamespaceName())));
     }
-
+    // 返回Response
     result.setResult(new ResponseEntity<>(notifications, HttpStatus.OK));
   }
 

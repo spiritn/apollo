@@ -82,6 +82,11 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     this.bizConfig = bizConfig;
   }
 
+  /**
+   * 客户端每隔60秒来调用这个接口，服务端会挂起这个请求60秒。
+   * 此方法不会立即返回response，而是把response（即DeferredResult<ResponseEntity<List<>>>）到添加到deferredResults的result中，
+   * 另外的线程中在listener的handMessage中会在接收到相应的变更后,调用对应的DeferredResult.setResult()
+   */
   @GetMapping
   public DeferredResult<ResponseEntity<List<ApolloConfigNotification>>> pollNotification(
       @RequestParam(value = "appId") String appId,
@@ -96,7 +101,6 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     } catch (Throwable ex) {
       Tracer.logError(ex);
     }
-
     if (CollectionUtils.isEmpty(notifications)) {
       throw new BadRequestException("Invalid format of notifications: " + notificationsAsString);
     }
@@ -121,24 +125,22 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     if (CollectionUtils.isEmpty(namespaces)) {
       throw new BadRequestException("Invalid format of notifications: " + notificationsAsString);
     }
-
-    Multimap<String, String> watchedKeysMap =
-        watchKeysUtil.assembleAllWatchKeys(appId, cluster, namespaces, dataCenter);
-
-    Set<String> watchedKeys = Sets.newHashSet(watchedKeysMap.values());
+    // watchedKey就是releaseMessage中的message 13056+default+TEST1.apollo
+    Multimap<String, String> watchedKeysMap = watchKeysUtil.assembleAllWatchKeys(appId, cluster, namespaces, dataCenter);
+    Set<String> watchedKeys = Sets.newHashSet(watchedKeysMap.values()); // 13056+default+TEST1.apollo
 
     /**
+     * 在检查是否有配置更新前，先配置deferredResult
      * 1、set deferredResult before the check, for avoid more waiting
      * If the check before setting deferredResult,it may receive a notification the next time
      * when method handleMessage is executed between check and set deferredResult.
      */
-    deferredResultWrapper
-          .onTimeout(() -> logWatchedKeys(watchedKeys, "Apollo.LongPoll.TimeOutKeys"));
-
-    // 注册异步线程完成时要执行的代码
+    // 注册异步线程超时和完成时要执行的代码
+    deferredResultWrapper.onTimeout(() -> logWatchedKeys(watchedKeys, "Apollo.LongPoll.TimeOutKeys"));
     deferredResultWrapper.onCompletion(() -> {
       //unregister all keys
       for (String key : watchedKeys) {
+        // 要从map中删除掉
         deferredResults.remove(key, deferredResultWrapper);
       }
       logWatchedKeys(watchedKeys, "Apollo.LongPoll.CompletedKeys");
@@ -146,6 +148,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
 
     //register all keys
     for (String key : watchedKeys) {
+      // 这里其实一个deferredResultWrapper
       this.deferredResults.put(key, deferredResultWrapper);
     }
 
@@ -156,8 +159,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     /**
      * 2、check new release
      */
-    List<ReleaseMessage> latestReleaseMessages =
-        releaseMessageService.findLatestReleaseMessagesGroupByMessages(watchedKeys);
+    List<ReleaseMessage> latestReleaseMessages = releaseMessageService.findLatestReleaseMessagesGroupByMessages(watchedKeys);
 
     /**
      * 手动关闭数据库连接，这里已经不再需要数据库连接了
@@ -168,12 +170,13 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
      */
     entityManagerUtil.closeEntityManager();
 
-    // 调用此方法时立即返回响应
     List<ApolloConfigNotification> newNotifications =
         getApolloConfigNotifications(namespaces, clientSideNotifications, watchedKeysMap, latestReleaseMessages);
     if (!CollectionUtils.isEmpty(newNotifications)) {
+      // 如果有新的更新，则调用此方法时立即返回响应
       deferredResultWrapper.setResult(newNotifications);
     }
+    // 否则会有另外线程在handleMessage中，去调用deferredResultWrapper.setResult方法
 
     return deferredResultWrapper.getResult();
   }
@@ -266,7 +269,8 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     ApolloConfigNotification configNotification = new ApolloConfigNotification(changedNamespace, message.getId());
     configNotification.addMessage(content, message.getId());
 
-    //do async notification if too many clients， default 500
+    //do async notification if too many clients， default 100
+    // 如果有多个客户端都来请求这个message，这里异步去处理，
     if (results.size() > bizConfig.releaseMessageNotificationBatch()) {
       largeNotificationBatchExecutorService.submit(() -> {
         logger.debug("Async notify {} clients for key {} with batch {}", results.size(), content,
@@ -274,6 +278,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
         for (int i = 0; i < results.size(); i++) {
           if (i > 0 && i % bizConfig.releaseMessageNotificationBatch() == 0) {
             try {
+              // 每响应100个客户端后，会sleep100ms，避免稍后太多客户端一起来请求服务端，造成较大流量冲击
               TimeUnit.MILLISECONDS.sleep(bizConfig.releaseMessageNotificationBatchIntervalInMilli());
             } catch (InterruptedException e) {
               //ignore

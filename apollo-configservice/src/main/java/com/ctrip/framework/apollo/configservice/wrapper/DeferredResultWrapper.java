@@ -17,6 +17,7 @@ import java.util.Map;
  * @author Jason Song(song_s@ctrip.com)
  */
 public class DeferredResultWrapper implements Comparable<DeferredResultWrapper> {
+  // 未修改时返回304状态码
   private static final ResponseEntity<List<ApolloConfigNotification>>
       NOT_MODIFIED_RESPONSE_LIST = new ResponseEntity<>(HttpStatus.NOT_MODIFIED);
 

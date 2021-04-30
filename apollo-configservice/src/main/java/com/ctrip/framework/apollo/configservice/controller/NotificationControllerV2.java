@@ -84,7 +84,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
 
   /**
    * 客户端每隔60秒来调用这个接口，服务端会挂起这个请求60秒。
-   * 此方法不会立即返回response，而是把response（即DeferredResult<ResponseEntity<List<>>>）到添加到deferredResults的result中，
+   * 此方法不会立即返回response，而是把response（即DeferredResult<ResponseEntity<List<>>>）到添加到deferredResults中，
    * 另外的线程中在listener的handMessage中会在接收到相应的变更后,调用对应的DeferredResult.setResult()
    */
   @GetMapping

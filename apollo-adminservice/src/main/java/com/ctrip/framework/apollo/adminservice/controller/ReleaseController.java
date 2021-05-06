@@ -99,7 +99,7 @@ public class ReleaseController {
     }
 
     /**
-     * 点击发布按钮后，调用此方法
+     * 点击发布按钮后，portal服务会调用此方法
      */
     @Transactional
     @PostMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases")

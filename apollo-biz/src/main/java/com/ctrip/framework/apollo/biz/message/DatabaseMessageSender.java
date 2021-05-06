@@ -48,7 +48,7 @@ public class DatabaseMessageSender implements MessageSender {
     public void sendMessage(String message, String channel) {
         logger.info("Sending message {} to channel {}", message, channel);
         if (!Objects.equals(channel, Topics.APOLLO_RELEASE_TOPIC)) {
-            logger.warn("Channel {} not supported by DatabaseMessageSender!");
+            logger.warn("Channel {} not supported by DatabaseMessageSender!", channel);
             return;
         }
 
@@ -68,7 +68,7 @@ public class DatabaseMessageSender implements MessageSender {
     }
 
     /**
-     * 这里初始化了一个线程池，
+     * 这里初始化了一个线程池，为什么不搞个定时任务呢
      * 该类会被adminService和configService都会加载，也就是会有多个线程都来执行
      */
     @PostConstruct
@@ -76,6 +76,7 @@ public class DatabaseMessageSender implements MessageSender {
         cleanExecutorService.submit(() -> {
             while (!cleanStopped.get() && !Thread.currentThread().isInterrupted()) {
                 try {
+                    // 取出元素
                     Long rm = toClean.poll(1, TimeUnit.SECONDS);
                     if (rm != null) {
                         // 清除表记录

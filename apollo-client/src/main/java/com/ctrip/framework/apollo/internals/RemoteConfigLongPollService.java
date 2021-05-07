@@ -21,16 +21,15 @@ import com.ctrip.framework.apollo.util.http.HttpResponse;
 import com.ctrip.framework.apollo.util.http.HttpUtil;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
+import com.google.common.collect.*;
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
@@ -40,8 +39,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
@@ -52,11 +49,15 @@ public class RemoteConfigLongPollService {
   private static final Joiner.MapJoiner MAP_JOINER = Joiner.on("&").withKeyValueSeparator("=");
   private static final Escaper queryParamEscaper = UrlEscapers.urlFormParameterEscaper();
   private static final long INIT_NOTIFICATION_ID = ConfigConsts.NOTIFICATION_ID_PLACEHOLDER;
+
+  // 长轮询时间90秒，这是客户端的超时时间
   //90 seconds, should be longer than server side's long polling timeout, which is now 60 seconds
   private static final int LONG_POLLING_READ_TIMEOUT = 90 * 1000;
+
   private final ExecutorService m_longPollingService;
   private final AtomicBoolean m_longPollingStopped;
   private SchedulePolicy m_longPollFailSchedulePolicyInSecond;
+  // 这里利用了Google的速率限制工具类，有空研究下
   private RateLimiter m_longPollRateLimiter;
   private final AtomicBoolean m_longPollStarted;
   private final Multimap<String, RemoteConfigRepository> m_longPollNamespaces;
@@ -90,6 +91,9 @@ public class RemoteConfigLongPollService {
     m_longPollRateLimiter = RateLimiter.create(m_configUtil.getLongPollQPS());
   }
 
+  /**
+   * RemoteConfigRepository的构造方法会调用这个submit方法，触发客户端轮询的定时任务
+   */
   public boolean submit(String namespace, RemoteConfigRepository remoteConfigRepository) {
     boolean added = m_longPollNamespaces.put(namespace, remoteConfigRepository);
     m_notifications.putIfAbsent(namespace, INIT_NOTIFICATION_ID);
@@ -100,6 +104,7 @@ public class RemoteConfigLongPollService {
   }
 
   private void startLongPolling() {
+    // 应该不会有多个线程来启动啊？
     if (!m_longPollStarted.compareAndSet(false, true)) {
       //already started
       return;
@@ -121,6 +126,7 @@ public class RemoteConfigLongPollService {
               //ignore
             }
           }
+          // 在上面延迟一定时候后，开启轮询
           doLongPollingRefresh(appId, cluster, dataCenter, secret);
         }
       });
@@ -163,6 +169,7 @@ public class RemoteConfigLongPollService {
         logger.debug("Long polling from {}", url);
 
         HttpRequest request = new HttpRequest(url);
+        // 客户端的过期时间
         request.setReadTimeout(LONG_POLLING_READ_TIMEOUT);
         if (!StringUtils.isBlank(secret)) {
           Map<String, String> headers = Signature.buildHttpHeaders(url, appId, secret);

@@ -29,6 +29,9 @@ import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +41,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
@@ -91,6 +92,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     gson = new Gson();
     this.trySync();
     this.schedulePeriodicRefresh();
+    // 就是这里触发的定时任务，客户端进行长轮询
     this.scheduleLongPollingRefresh();
   }
 

@@ -1,23 +1,9 @@
 package com.ctrip.framework.apollo.internals;
 
-import com.ctrip.framework.apollo.enums.ConfigSourceType;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ctrip.framework.apollo.build.ApolloInjector;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.core.utils.ClassLoaderUtil;
+import com.ctrip.framework.apollo.enums.ConfigSourceType;
 import com.ctrip.framework.apollo.exceptions.ApolloConfigException;
 import com.ctrip.framework.apollo.tracer.Tracer;
 import com.ctrip.framework.apollo.tracer.spi.Transaction;
@@ -25,8 +11,17 @@ import com.ctrip.framework.apollo.util.ConfigUtil;
 import com.ctrip.framework.apollo.util.ExceptionUtil;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 
 /**
+ * 处理本地文件系统中保存的配置文件，抽象成了一个ConfigRepository
  * @author Jason Song(song_s@ctrip.com)
  */
 public class LocalFileConfigRepository extends AbstractConfigRepository
@@ -37,6 +32,7 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
   private File m_baseDir;
   private final ConfigUtil m_configUtil;
   private volatile Properties m_fileProperties;
+  // upstream就是git中远程仓库的意思，也就是要和谁保持一致
   private volatile ConfigRepository m_upstream;
 
   private volatile ConfigSourceType m_sourceType = ConfigSourceType.LOCAL;
@@ -50,6 +46,9 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
     this(namespace, null);
   }
 
+  /**
+   * @see    com.ctrip.framework.apollo.spi.DefaultConfigFactory 的createLocalConfigRepository
+   */
   public LocalFileConfigRepository(String namespace, ConfigRepository upstream) {
     m_namespace = namespace;
     m_configUtil = ApolloInjector.getInstance(ConfigUtil.class);
@@ -173,10 +172,13 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
 
   private synchronized void updateFileProperties(Properties newProperties, ConfigSourceType sourceType) {
     this.m_sourceType = sourceType;
+    // 如果相等直接返回，
     if (newProperties.equals(m_fileProperties)) {
       return;
     }
+    // 否则替换掉本地配置文件中的属性值
     this.m_fileProperties = newProperties;
+    // 然后持久化到本地文件中
     persistLocalCacheFile(m_baseDir, m_namespace);
   }
 

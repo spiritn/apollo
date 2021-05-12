@@ -1,11 +1,12 @@
 package com.ctrip.framework.apollo.spring.property;
 
+import org.springframework.core.MethodParameter;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import org.springframework.core.MethodParameter;
 
 /**
  * Spring @Value method info
@@ -65,6 +66,7 @@ public class SpringValue {
     if (bean == null) {
       return;
     }
+    // 通过反射的方式直接更新值。Accessible先设为true，再改回去
     boolean accessible = field.isAccessible();
     field.setAccessible(true);
     field.set(bean, newVal);

@@ -86,7 +86,7 @@ public class ConfigServiceAutoConfiguration {
     @Bean
     public ReleaseMessageScanner releaseMessageScanner() {
       ReleaseMessageScanner releaseMessageScanner = new ReleaseMessageScanner();
-      //0. handle release message cache
+      //0. handle release message cache 缓存Map<message, releaseMessage>
       releaseMessageScanner.addMessageListener(releaseMessageServiceWithCache);
       //1. handle gray release rule
       releaseMessageScanner.addMessageListener(grayReleaseRulesHolder);

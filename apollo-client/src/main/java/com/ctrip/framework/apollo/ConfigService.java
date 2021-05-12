@@ -10,6 +10,7 @@ import com.ctrip.framework.apollo.spi.ConfigRegistry;
 /**
  * Entry point for client config use
  *
+ *
  * @author Jason Song(song_s@ctrip.com)
  */
 public class ConfigService {
@@ -30,6 +31,9 @@ public class ConfigService {
     return m_configManager;
   }
 
+  /**
+   * 懒加载初始化m_configRegistry
+   */
   private ConfigRegistry getRegistry() {
     if (m_configRegistry == null) {
       synchronized (this) {

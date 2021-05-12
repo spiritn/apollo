@@ -1,21 +1,7 @@
 package com.ctrip.framework.apollo.internals;
 
-import com.ctrip.framework.apollo.enums.ConfigSourceType;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ctrip.framework.apollo.core.utils.ClassLoaderUtil;
+import com.ctrip.framework.apollo.enums.ConfigSourceType;
 import com.ctrip.framework.apollo.enums.PropertyChangeType;
 import com.ctrip.framework.apollo.model.ConfigChange;
 import com.ctrip.framework.apollo.model.ConfigChangeEvent;
@@ -23,6 +9,13 @@ import com.ctrip.framework.apollo.tracer.Tracer;
 import com.ctrip.framework.apollo.util.ExceptionUtil;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.RateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -67,12 +60,18 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
     }
   }
 
+  /**
+   * 这个方法可以看出属性值的获取来源顺序
+   */
   @Override
   public String getProperty(String key, String defaultValue) {
     // step 1: check system properties, i.e. -Dkey=value
+    // 1. 先从系统属性获取，例-Dkey=value。这也代表系统属性指定的具有最高优先级
     String value = System.getProperty(key);
 
     // step 2: check local cached properties file
+    // 2. 再尝试从本地内存缓存的配置文件获取，也就是当前类的这个m_configProperties属性在缓存
+    // 从远程服务获取到的配置会更新到此缓存中
     if (value == null && m_configProperties.get() != null) {
       value = m_configProperties.get().getProperty(key);
     }
@@ -83,18 +82,22 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
      * so the caller should provide the key in the right case
      */
     if (value == null) {
+      // 3. 再尝试从环境变量查找
       value = System.getenv(key);
     }
 
     // step 4: check properties file from classpath
+    // 4.再尝试从项目classpath中获取
     if (value == null && m_resourceProperties != null) {
       value = m_resourceProperties.getProperty(key);
     }
 
+    // 再次尝试从缓存中查找。这里tryAcquire应该是为了避免找不到时疯狂输出日志，做了速率限制，值得借鉴
     if (value == null && m_configProperties.get() == null && m_warnLogRateLimiter.tryAcquire()) {
       logger.warn("Could not load config for namespace {} from Apollo, please check whether the configs are released in Apollo! Return default value now!", m_namespace);
     }
 
+    // 4.最后返回默认值
     return value == null ? defaultValue : value;
   }
 
@@ -126,6 +129,11 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
     return h.keySet();
   }
 
+  /**
+   * 接受RepositoryChange变更消息
+   * @param namespace the namespace of this repository change
+   * @param newProperties the properties after change
+   */
   @Override
   public synchronized void onRepositoryChange(String namespace, Properties newProperties) {
     if (newProperties.equals(m_configProperties.get())) {
@@ -142,7 +150,7 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
     if (actualChanges.isEmpty()) {
       return;
     }
-
+    // 计算出更新的属性后，通知监听者
     this.fireConfigChange(new ConfigChangeEvent(m_namespace, actualChanges));
 
     Tracer.logEvent("Apollo.Client.ConfigChanges", m_namespace);

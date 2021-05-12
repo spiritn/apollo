@@ -450,6 +450,8 @@ public abstract class AbstractConfig implements Config {
           String listenerName = listener.getClass().getName();
           Transaction transaction = Tracer.newTransaction("Apollo.ConfigChangeListener", listenerName);
           try {
+            // 这里是配置更新后，变更通知的重要地方。几个实现ConfigChangeListener监听ConfigChangeEvent变化，去更新配置
+            // 包括添加@ConfigChangeListener，用户自己实现的ConfigChangeListener接口的，还有个自动处理@Value的方法
             listener.onChange(changeEvent);
             transaction.setStatus(Transaction.SUCCESS);
           } catch (Throwable ex) {

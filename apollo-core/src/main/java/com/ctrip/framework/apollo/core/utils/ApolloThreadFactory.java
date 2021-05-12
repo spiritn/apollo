@@ -13,22 +13,35 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ApolloThreadFactory implements ThreadFactory {
   private static Logger log = LoggerFactory.getLogger(ApolloThreadFactory.class);
 
+  /**
+   * AtomicLong的使用举例
+   */
   private final AtomicLong threadNumber = new AtomicLong(1);
 
   private final String namePrefix;
 
   private final boolean daemon;
 
+    /**
+     * 这种挺好的，让所有手动创建的线程都属于一个group，便于进行管理。
+     * 如指定所有手动创建的线程名都以Apollo为前缀，也可以用于检查所有线程是否已结束
+     */
   private static final ThreadGroup threadGroup = new ThreadGroup("Apollo");
 
   public static ThreadGroup getThreadGroup() {
     return threadGroup;
   }
 
+    /**
+     * 为什么要手动创建线程工厂，这个类给出了使用例子
+     */
   public static ThreadFactory create(String namePrefix, boolean daemon) {
     return new ApolloThreadFactory(namePrefix, daemon);
   }
 
+    /**
+     * 是否在指定时间内优雅关闭服务的例子？？ 这个方法好像只是判断了下是否在执行时间内所有活动线程是否结束
+     */
   public static boolean waitAllShutdown(int timeoutInMillis) {
     ThreadGroup group = getThreadGroup();
     Thread[] activeThreads = new Thread[group.activeCount()];

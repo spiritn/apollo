@@ -97,6 +97,7 @@ public class RemoteConfigLongPollService {
   public boolean submit(String namespace, RemoteConfigRepository remoteConfigRepository) {
     boolean added = m_longPollNamespaces.put(namespace, remoteConfigRepository);
     m_notifications.putIfAbsent(namespace, INIT_NOTIFICATION_ID);
+    // 原子量AtomicBoolean表示是否已经开启轮询
     if (!m_longPollStarted.get()) {
       startLongPolling();
     }
@@ -104,7 +105,7 @@ public class RemoteConfigLongPollService {
   }
 
   private void startLongPolling() {
-    // 应该不会有多个线程来启动啊？
+    // RemoteConfigLongPollService只有一个，而RemoteConfigRepository有多个都会来调用本方法
     if (!m_longPollStarted.compareAndSet(false, true)) {
       //already started
       return;
@@ -157,15 +158,14 @@ public class RemoteConfigLongPollService {
       Transaction transaction = Tracer.newTransaction("Apollo.ConfigService", "pollNotification");
       String url = null;
       try {
+        // 如果lastServiceDto不为空，就用上次的config服务地址。否则随机选取一个，实现负载均衡
         if (lastServiceDto == null) {
           List<ServiceDTO> configServices = getConfigServices();
           lastServiceDto = configServices.get(random.nextInt(configServices.size()));
         }
 
-        url =
-            assembleLongPollRefreshUrl(lastServiceDto.getHomepageUrl(), appId, cluster, dataCenter,
+        url = assembleLongPollRefreshUrl(lastServiceDto.getHomepageUrl(), appId, cluster, dataCenter,
                 m_notifications);
-
         logger.debug("Long polling from {}", url);
 
         HttpRequest request = new HttpRequest(url);
@@ -178,18 +178,19 @@ public class RemoteConfigLongPollService {
 
         transaction.addData("Url", url);
 
-        final HttpResponse<List<ApolloConfigNotification>> response =
-            m_httpUtil.doGet(request, m_responseType);
-
+        // 这里发出了请求，得到response
+        final HttpResponse<List<ApolloConfigNotification>> response = m_httpUtil.doGet(request, m_responseType);
         logger.debug("Long polling response: {}, url: {}", response.getStatusCode(), url);
+
         if (response.getStatusCode() == 200 && response.getBody() != null) {
           updateNotifications(response.getBody());
           updateRemoteNotifications(response.getBody());
           transaction.addData("Result", response.getBody().toString());
+          // 去通知变更
           notify(lastServiceDto, response.getBody());
         }
 
-        //try to load balance
+        //try to load balance 客户端就这样实现负载均衡的？
         if (response.getStatusCode() == 304 && random.nextBoolean()) {
           lastServiceDto = null;
         }
@@ -216,6 +217,7 @@ public class RemoteConfigLongPollService {
     }
   }
 
+
   private void notify(ServiceDTO lastServiceDto, List<ApolloConfigNotification> notifications) {
     if (notifications == null || notifications.isEmpty()) {
       return;
@@ -232,6 +234,7 @@ public class RemoteConfigLongPollService {
           .get(String.format("%s.%s", namespaceName, ConfigFileFormat.Properties.getValue())));
       for (RemoteConfigRepository remoteConfigRepository : toBeNotified) {
         try {
+            // 通知remoteConfigRepository立即去执行获取配置
           remoteConfigRepository.onLongPollNotified(lastServiceDto, remoteMessages);
         } catch (Throwable ex) {
           Tracer.logError(ex);
@@ -247,6 +250,7 @@ public class RemoteConfigLongPollService {
       }
       String namespaceName = notification.getNamespaceName();
       if (m_notifications.containsKey(namespaceName)) {
+          // 把messageID设置给对应的namespaceName
         m_notifications.put(namespaceName, notification.getNotificationId());
       }
       //since .properties are filtered out by default, so we need to check if there is notification with .properties suffix
@@ -283,13 +287,16 @@ public class RemoteConfigLongPollService {
     return STRING_JOINER.join(m_longPollNamespaces.keySet());
   }
 
+  /**
+   * 组装拼接长轮询要调用的URL
+   */
   String assembleLongPollRefreshUrl(String uri, String appId, String cluster, String dataCenter,
                                     Map<String, Long> notificationsMap) {
+    // 这里的拼接URL的参数，可以学习下
     Map<String, String> queryParams = Maps.newHashMap();
     queryParams.put("appId", queryParamEscaper.escape(appId));
     queryParams.put("cluster", queryParamEscaper.escape(cluster));
-    queryParams
-        .put("notifications", queryParamEscaper.escape(assembleNotifications(notificationsMap)));
+    queryParams.put("notifications", queryParamEscaper.escape(assembleNotifications(notificationsMap)));
 
     if (!Strings.isNullOrEmpty(dataCenter)) {
       queryParams.put("dataCenter", queryParamEscaper.escape(dataCenter));
@@ -299,6 +306,7 @@ public class RemoteConfigLongPollService {
       queryParams.put("ip", queryParamEscaper.escape(localIp));
     }
 
+    // 利用MAP_JOINER来拼接，可以借鉴
     String params = MAP_JOINER.join(queryParams);
     if (!uri.endsWith("/")) {
       uri += "/";

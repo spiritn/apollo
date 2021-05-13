@@ -90,9 +90,11 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     m_loadConfigFailSchedulePolicy = new ExponentialSchedulePolicy(m_configUtil.getOnErrorRetryInterval(),
         m_configUtil.getOnErrorRetryInterval() * 8);
     gson = new Gson();
+    // 初始化时先去拉取一次配置
     this.trySync();
+    // 每隔5分钟的定时拉取
     this.schedulePeriodicRefresh();
-    // 就是这里触发的定时任务，客户端进行长轮询
+    // 就是这里触发的客户端进行长轮询定时任务
     this.scheduleLongPollingRefresh();
   }
 
@@ -114,6 +116,9 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     return ConfigSourceType.REMOTE;
   }
 
+  /**
+   * 配置每隔5分钟查询一次服务端
+   */
   private void schedulePeriodicRefresh() {
     logger.debug("Schedule periodic refresh with interval: {} {}",
         m_configUtil.getRefreshInterval(), m_configUtil.getRefreshIntervalTimeUnit());
@@ -141,7 +146,9 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
       //reference equals means HTTP 304
       if (previous != current) {
         logger.debug("Remote Config refreshed!");
+        // 如果发生了变更，替换掉缓存的ApolloConfig
         m_configCache.set(current);
+        // 并通知各个listener
         this.fireRepositoryChange(m_namespace, this.getConfig());
       }
 
@@ -165,6 +172,9 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     return result;
   }
 
+  /**
+   * 实际去发出HTTP请求服务端获取配置
+   */
   private ApolloConfig loadApolloConfig() {
     if (!m_loadConfigRateLimiter.tryAcquire(5, TimeUnit.SECONDS)) {
       //wait at most 5 seconds
@@ -227,11 +237,12 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
           transaction.addData("StatusCode", response.getStatusCode());
           transaction.setStatus(Transaction.SUCCESS);
 
+          // 如果返回304，说明没有变化，不更新内存中的ApolloConfig
           if (response.getStatusCode() == 304) {
             logger.debug("Config server responds with 304 HTTP status code.");
             return m_configCache.get();
           }
-
+          // 否则返回新的ApolloConfig
           ApolloConfig result = response.getBody();
 
           logger.debug("Loaded config for {}: {}", m_namespace, result);
@@ -312,12 +323,16 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     remoteConfigLongPollService.submit(m_namespace, this);
   }
 
+  /**
+   * RemoteConfigLongPollService长轮询在收到变更消息时，会调用此方法通知
+   */
   public void onLongPollNotified(ServiceDTO longPollNotifiedServiceDto, ApolloNotificationMessages remoteMessages) {
     m_longPollServiceDto.set(longPollNotifiedServiceDto);
     m_remoteMessages.set(remoteMessages);
     m_executorService.submit(new Runnable() {
       @Override
       public void run() {
+        // 在收到消息变更后，立即重新去获取配置
         m_configNeedForceRefresh.set(true);
         trySync();
       }

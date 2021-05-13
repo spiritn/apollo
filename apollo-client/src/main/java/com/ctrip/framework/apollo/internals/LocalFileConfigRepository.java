@@ -65,6 +65,9 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
     }
   }
 
+  /**
+   * 查看配置文件的本地保存位置
+   */
   private File findLocalCacheDir() {
     try {
       String defaultCacheDir = m_configUtil.getDefaultLocalCacheDir();
@@ -72,13 +75,14 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
       if (!Files.exists(path)) {
         Files.createDirectories(path);
       }
+      // 存在且可写
       if (Files.exists(path) && Files.isWritable(path)) {
         return new File(defaultCacheDir, CONFIG_DIR);
       }
     } catch (Throwable ex) {
       //ignore
     }
-
+    // 如果上面的逻辑出错，就在classPath下创建
     return new File(ClassLoaderUtil.getClassPath(), CONFIG_DIR);
   }
 
@@ -116,9 +120,11 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
     if (newProperties.equals(m_fileProperties)) {
       return;
     }
+    // 如果不相等就更新缓存中的
     Properties newFileProperties = propertiesFactory.getPropertiesInstance();
     newFileProperties.putAll(newProperties);
     updateFileProperties(newFileProperties, m_upstream.getSourceType());
+    //  再次发出RepositoryChange
     this.fireRepositoryChange(namespace, newProperties);
   }
 

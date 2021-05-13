@@ -33,6 +33,9 @@ public class DefaultConfigFactory implements ConfigFactory {
     m_configUtil = ApolloInjector.getInstance(ConfigUtil.class);
   }
 
+  /**
+   * 给指定namespace创建Config
+   */
   @Override
   public Config create(String namespace) {
     ConfigFileFormat format = determineFileFormat(namespace);
@@ -70,6 +73,7 @@ public class DefaultConfigFactory implements ConfigFactory {
           namespace);
       return new LocalFileConfigRepository(namespace);
     }
+    // 创建一个关联了RemoteConfigRepository的LocalFileConfigRepository
     return new LocalFileConfigRepository(namespace, createRemoteConfigRepository(namespace));
   }
 

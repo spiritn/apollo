@@ -225,16 +225,17 @@ public class RemoteConfigLongPollService {
     for (ApolloConfigNotification notification : notifications) {
       String namespaceName = notification.getNamespaceName();
       //create a new list to avoid ConcurrentModificationException
-      List<RemoteConfigRepository> toBeNotified =
-          Lists.newArrayList(m_longPollNamespaces.get(namespaceName));
+      // 根据namespace去通知对应关心的RemoteConfigRepository
+      List<RemoteConfigRepository> toBeNotified = Lists.newArrayList(m_longPollNamespaces.get(namespaceName));
       ApolloNotificationMessages originalMessages = m_remoteNotificationMessages.get(namespaceName);
       ApolloNotificationMessages remoteMessages = originalMessages == null ? null : originalMessages.clone();
       //since .properties are filtered out by default, so we need to check if there is any listener for it
       toBeNotified.addAll(m_longPollNamespaces
           .get(String.format("%s.%s", namespaceName, ConfigFileFormat.Properties.getValue())));
+
       for (RemoteConfigRepository remoteConfigRepository : toBeNotified) {
         try {
-            // 通知remoteConfigRepository立即去执行获取配置
+          // 通知remoteConfigRepository立即去执行获取配置
           remoteConfigRepository.onLongPollNotified(lastServiceDto, remoteMessages);
         } catch (Throwable ex) {
           Tracer.logError(ex);

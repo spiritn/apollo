@@ -1,16 +1,19 @@
 package com.ctrip.framework.apollo.util.function;
 
-import java.util.Date;
-
 import com.ctrip.framework.apollo.exceptions.ApolloConfigException;
 import com.ctrip.framework.apollo.util.parser.ParserException;
 import com.ctrip.framework.apollo.util.parser.Parsers;
 import com.google.common.base.Function;
 
+import java.util.Date;
+
 /**
  * @author Jason Song(song_s@ctrip.com)
  */
 public interface Functions {
+  /**
+   * Function的使用案例，好好学习，多借鉴!
+   */
   Function<String, Integer> TO_INT_FUNCTION = new Function<String, Integer>() {
     @Override
     public Integer apply(String input) {

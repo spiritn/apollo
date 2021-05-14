@@ -11,6 +11,8 @@
  *   Sources so that placeholders like ${someProperty} and @Value("someProperty") are supported.</li>
  * </ul>
  *
+ *  本包的作用是集成Spring，在配置namespace后，将属性注入Spring Property Sources，
+ *
  * With the above configuration, annotations like @ApolloConfig("someNamespace")
  * and @ApolloConfigChangeListener("someNamespace) are also supported.<br />
  * <br />

@@ -31,6 +31,7 @@ public class LocalFileConfigRepository extends AbstractConfigRepository
   private final String m_namespace;
   private File m_baseDir;
   private final ConfigUtil m_configUtil;
+  // 在内存中保存配置项
   private volatile Properties m_fileProperties;
   // upstream就是git中远程仓库的意思，也就是要和谁保持一致
   private volatile ConfigRepository m_upstream;

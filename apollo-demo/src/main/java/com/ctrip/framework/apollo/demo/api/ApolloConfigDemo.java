@@ -49,11 +49,15 @@ public class ApolloConfigDemo {
     };
     config = ConfigService.getAppConfig();
     config.addChangeListener(changeListener);
+
     yamlConfig = ConfigService.getConfig("application.yaml");
     yamlConfig.addChangeListener(changeListener);
+
     publicConfig = ConfigService.getConfig("TEST1.apollo");
     publicConfig.addChangeListener(changeListener);
+
     applicationConfigFile = ConfigService.getConfigFile("application", ConfigFileFormat.Properties);
+
     // datasources.xml
     xmlConfigFile = ConfigService.getConfigFile("datasources", ConfigFileFormat.XML);
     xmlConfigFile.addChangeListener(new ConfigFileChangeListener() {
@@ -62,6 +66,7 @@ public class ApolloConfigDemo {
         logger.info(changeEvent.toString());
       }
     });
+
     // application.yaml
     yamlConfigFile = (YamlConfigFile) ConfigService.getConfigFile("application", ConfigFileFormat.YAML);
   }

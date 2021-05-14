@@ -9,12 +9,13 @@ import com.ctrip.framework.apollo.spring.config.PropertySourcesProcessor;
 import com.ctrip.framework.apollo.spring.property.SpringValueDefinitionProcessor;
 import com.ctrip.framework.apollo.spring.util.BeanRegistrationUtil;
 import com.google.common.collect.Lists;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DefaultApolloConfigRegistrarHelper implements ApolloConfigRegistrarHelper {
 
@@ -22,8 +23,10 @@ public class DefaultApolloConfigRegistrarHelper implements ApolloConfigRegistrar
   public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
     AnnotationAttributes attributes = AnnotationAttributes
         .fromMap(importingClassMetadata.getAnnotationAttributes(EnableApolloConfig.class.getName()));
+    //  获取注解里配置的namespaces
     String[] namespaces = attributes.getStringArray("value");
     int order = attributes.getNumber("order");
+    // Spring的PropertySourcesProcessor处理！
     PropertySourcesProcessor.addNamespaces(Lists.newArrayList(namespaces), order);
 
     Map<String, Object> propertySourcesPlaceholderPropertyValues = new HashMap<>();

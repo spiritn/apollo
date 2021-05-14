@@ -13,6 +13,11 @@ public class ApolloConfigRegistrar implements ImportBeanDefinitionRegistrar {
 
   private ApolloConfigRegistrarHelper helper = ServiceBootstrap.loadPrimary(ApolloConfigRegistrarHelper.class);
 
+  /**
+   * 去注册
+   * @param importingClassMetadata
+   * @param registry
+   */
   @Override
   public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
     helper.registerBeanDefinitions(importingClassMetadata, registry);

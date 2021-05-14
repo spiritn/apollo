@@ -46,6 +46,8 @@ public class ConfigService {
     }
 
     /**
+     * 重要方法，获取默认的application对应的Config
+     *
      * Get Application's config instance.
      *
      * @return config instance

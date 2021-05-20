@@ -42,7 +42,7 @@ public class AutoUpdateConfigChangeListener implements ConfigChangeListener{
   }
 
   /**
-   * 这个方法负责自动处理@Value值的更新，在监听到配置更新后，拿到对应的SpringValue去更新值，直接通过反射的方法去更新值
+   * 这个方法负责在监听到ConfigChangeEvent后，拿到对应的SpringValue去更新值，直接通过反射的方法去更新值
    * @param changeEvent the event for this change
    */
   @Override
@@ -53,6 +53,7 @@ public class AutoUpdateConfigChangeListener implements ConfigChangeListener{
     }
     for (String key : keys) {
       // 1. check whether the changed key is relevant
+      //  找到关心key对应的SpringValues
       Collection<SpringValue> targetValues = springValueRegistry.get(beanFactory, key);
       if (targetValues == null || targetValues.isEmpty()) {
         continue;

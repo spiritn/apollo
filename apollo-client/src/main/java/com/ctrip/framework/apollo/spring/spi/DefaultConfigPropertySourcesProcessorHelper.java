@@ -13,6 +13,9 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 这个类目前没有用到，
+ */
 public class DefaultConfigPropertySourcesProcessorHelper implements ConfigPropertySourcesProcessorHelper {
 
   @Override

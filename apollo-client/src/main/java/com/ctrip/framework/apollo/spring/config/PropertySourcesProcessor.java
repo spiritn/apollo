@@ -1,5 +1,7 @@
 package com.ctrip.framework.apollo.spring.config;
 
+import com.ctrip.framework.apollo.Config;
+import com.ctrip.framework.apollo.ConfigService;
 import com.ctrip.framework.apollo.build.ApolloInjector;
 import com.ctrip.framework.apollo.spring.property.AutoUpdateConfigChangeListener;
 import com.ctrip.framework.apollo.spring.util.SpringInjector;
@@ -7,13 +9,7 @@ import com.ctrip.framework.apollo.util.ConfigUtil;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
-
-import com.ctrip.framework.apollo.Config;
-import com.ctrip.framework.apollo.ConfigService;
-
 import com.google.common.collect.Sets;
-import java.util.List;
-import java.util.Set;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -21,14 +17,12 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
-import org.springframework.core.env.CompositePropertySource;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.*;
 
 import java.util.Collection;
 import java.util.Iterator;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertySource;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Apollo Property Sources processor for Spring Annotation Based Application. <br /> <br />
@@ -73,8 +67,9 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
     while (iterator.hasNext()) {
       int order = iterator.next();
       for (String namespace : NAMESPACE_NAMES.get(order)) {
+        // 获取namespace对应的config
         Config config = ConfigService.getConfig(namespace);
-
+        //
         composite.addPropertySource(configPropertySourceFactory.getConfigPropertySource(namespace, config));
       }
     }

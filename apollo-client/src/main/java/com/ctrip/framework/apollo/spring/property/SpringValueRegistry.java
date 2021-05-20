@@ -4,6 +4,9 @@ import com.ctrip.framework.apollo.core.utils.ApolloThreadFactory;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import org.springframework.beans.factory.BeanFactory;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,16 +15,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.collect.Multimaps;
-import org.springframework.beans.factory.BeanFactory;
-
 public class SpringValueRegistry {
   private static final long CLEAN_INTERVAL_IN_SECONDS = 5;
   private final Map<BeanFactory, Multimap<String, SpringValue>> registry = Maps.newConcurrentMap();
+  // AtomicBoolean的经典使用案例，用来表示一个状态，是否初始化
   private final AtomicBoolean initialized = new AtomicBoolean(false);
   private final Object LOCK = new Object();
 
+  /**
+   * 持有所有的key和SpringValue，
+   */
   public void register(BeanFactory beanFactory, String key, SpringValue springValue) {
+    // 经典的双重检查
     if (!registry.containsKey(beanFactory)) {
       synchronized (LOCK) {
         if (!registry.containsKey(beanFactory)) {
@@ -47,7 +52,8 @@ public class SpringValueRegistry {
   }
 
   private void initialize() {
-    Executors.newSingleThreadScheduledExecutor(ApolloThreadFactory.create("SpringValueRegistry", true)).scheduleAtFixedRate(
+    Executors.newSingleThreadScheduledExecutor(
+            ApolloThreadFactory.create("SpringValueRegistry", true)).scheduleAtFixedRate(
         new Runnable() {
           @Override
           public void run() {
@@ -68,7 +74,7 @@ public class SpringValueRegistry {
       while (springValueIterator.hasNext()) {
         Entry<String, SpringValue> springValue = springValueIterator.next();
         if (!springValue.getValue().isTargetBeanValid()) {
-          // clear unused spring values
+          // clear unused spring values 清除不再使用的Spring values，通过WeakReference
           springValueIterator.remove();
         }
       }

@@ -18,6 +18,7 @@ public class SpringValue {
 
   private MethodParameter methodParameter;
   private Field field;
+  // 弱引用，在下次GC时进行回收。因为这个bean是被保存在SpringValueRegistry中的，
   private WeakReference<Object> beanRef;
   private String beanName;
   private String key;

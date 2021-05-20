@@ -17,7 +17,8 @@ public class BeanRegistrationUtil {
   }
 
   /**
-   * 注册BeanDefinition的工具类，可以借鉴下。里面也没做啥
+   * 注册BeanDefinition的工具类，可以借鉴下。
+   * 目的是为了 动态注册一个bean到容器里
    */
   public static boolean registerBeanDefinitionIfNotExists(BeanDefinitionRegistry registry, String beanName,
                                                           Class<?> beanClass, Map<String, Object> extraPropertyValues) {
@@ -42,6 +43,7 @@ public class BeanRegistrationUtil {
       }
     }
 
+    // 注册一个BeanDefinition
     registry.registerBeanDefinition(beanName, beanDefinition);
 
     return true;

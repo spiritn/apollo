@@ -11,15 +11,16 @@ import org.springframework.core.type.AnnotationMetadata;
  */
 public class ApolloConfigRegistrar implements ImportBeanDefinitionRegistrar {
 
-  private ApolloConfigRegistrarHelper helper = ServiceBootstrap.loadPrimary(ApolloConfigRegistrarHelper.class);
+    private ApolloConfigRegistrarHelper helper = ServiceBootstrap.loadPrimary(ApolloConfigRegistrarHelper.class);
 
-  /**
-   * 去注册
-   * @param importingClassMetadata
-   * @param registry
-   */
-  @Override
-  public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-    helper.registerBeanDefinitions(importingClassMetadata, registry);
-  }
+    /**
+     * 注意!! 这里实现了ImportBeanDefinitionRegistrar接口，他可以注册BeanDefinitions，也就是动态注册Bean到容器中
+     *
+     * @param importingClassMetadata
+     * @param registry
+     */
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        helper.registerBeanDefinitions(importingClassMetadata, registry);
+    }
 }

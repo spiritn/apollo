@@ -60,16 +60,18 @@ public class SpringValueProcessor extends ApolloProcessor implements BeanFactory
   @Override
   public Object postProcessBeforeInitialization(Object bean, String beanName)
       throws BeansException {
+    // 这里还是做了个开关控制
     if (configUtil.isAutoUpdateInjectedSpringPropertiesEnabled()) {
+      // 调用父类的postProcessBeforeInitialization
       super.postProcessBeforeInitialization(bean, beanName);
+      // 不知道干嘛用
       processBeanPropertyValues(bean, beanName);
     }
     return bean;
   }
 
-
   /**
-   * 就是这个方法来讲apollo里的属性设置进@Value
+   * 就是这个方法在启动时来将apollo里的属性设置进@Value
    */
   @Override
   protected void processField(Object bean, String beanName, Field field) {

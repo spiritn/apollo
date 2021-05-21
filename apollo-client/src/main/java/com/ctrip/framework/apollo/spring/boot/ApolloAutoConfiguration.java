@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 // 所以实际的项目都要开启apollo.bootstrap.enabled=true
 @ConditionalOnProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED)
-@ConditionalOnMissingBean(PropertySourcesProcessor.class)
+@ConditionalOnMissingBean(PropertySourcesProcessor.class) // 只有没有配置PropertySourcesProcessor时，才会开启自动配置
 public class ApolloAutoConfiguration {
 
   @Bean

@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 这个类目前没有用到，
+ * 这个类是ApolloAutoConfiguration引入的，只有没有配置PropertySourcesProcessor时才会引入
  */
 public class DefaultConfigPropertySourcesProcessorHelper implements ConfigPropertySourcesProcessorHelper {
 

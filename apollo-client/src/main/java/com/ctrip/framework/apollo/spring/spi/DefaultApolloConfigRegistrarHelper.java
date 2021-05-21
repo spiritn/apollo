@@ -43,7 +43,7 @@ public class DefaultApolloConfigRegistrarHelper implements ApolloConfigRegistrar
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, PropertySourcesProcessor.class.getName(),
         PropertySourcesProcessor.class);
 
-    // 注册ApolloAnnotationProcessor，它负责处理@ApolloConfigChangeListener
+    // 注册ApolloAnnotationProcessor，它负责处理@ApolloConfigChangeListener和@ApolloConfig
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, ApolloAnnotationProcessor.class.getName(),
         ApolloAnnotationProcessor.class);
 

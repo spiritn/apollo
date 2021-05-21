@@ -111,7 +111,7 @@ public class ApolloApplicationContextInitializer implements
             composite.addPropertySource(configPropertySourceFactory.getConfigPropertySource(namespace, config));
         }
 
-        // 把所有的配置值添加到Spring的environment的PropertySources，这样通过Spring的PropertySources就可以方便的获取所有值，当然@value也没问题
+        // 把所有的配置值添加到Spring的environment的PropertySources，
         environment.getPropertySources().addFirst(composite);
     }
 

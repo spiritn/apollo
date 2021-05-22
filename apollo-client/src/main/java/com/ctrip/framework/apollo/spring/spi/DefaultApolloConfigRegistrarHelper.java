@@ -20,7 +20,7 @@ import java.util.Map;
 public class DefaultApolloConfigRegistrarHelper implements ApolloConfigRegistrarHelper {
 
   /**
-   * 注册一个BeanDefinitions，也就是注册一个bean到容器里
+   * 注册BeanDefinitions，也就是注册bean到容器里
    */
   @Override
   public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
@@ -29,33 +29,32 @@ public class DefaultApolloConfigRegistrarHelper implements ApolloConfigRegistrar
     // 解析EnableApolloConfig注解里配置的namespaces。其实生产中一般是在配置文件里指定要获取的namespaces
     String[] namespaces = attributes.getStringArray("value");
     int order = attributes.getNumber("order");
-
-    // 处理Spring的PropertySourcesProcessor
     PropertySourcesProcessor.addNamespaces(Lists.newArrayList(namespaces), order);
 
+    // PropertySourcesPlaceholderConfigurer负责替换PlaceHolder为对应的属性值，要确保先执行
     Map<String, Object> propertySourcesPlaceholderPropertyValues = new HashMap<>();
     // to make sure the default PropertySourcesPlaceholderConfigurer's priority is higher than PropertyPlaceholderConfigurer
     propertySourcesPlaceholderPropertyValues.put("order", 0);
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, PropertySourcesPlaceholderConfigurer.class.getName(),
         PropertySourcesPlaceholderConfigurer.class, propertySourcesPlaceholderPropertyValues);
 
-    // 注册PropertySourcesProcessor
+    // 注册PropertySourcesProcessor，将EnableApolloConfig注解里配置的namespaces集成到Spring的PropertySources里
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, PropertySourcesProcessor.class.getName(),
         PropertySourcesProcessor.class);
 
-    // 注册ApolloAnnotationProcessor，它负责处理@ApolloConfigChangeListener和@ApolloConfig
+    // 注册ApolloAnnotationProcessor，它负责解析@ApolloConfigChangeListener和@ApolloConfig
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, ApolloAnnotationProcessor.class.getName(),
         ApolloAnnotationProcessor.class);
 
-    // 注册SpringValueProcessor 它负责加载所有的SpringValue
+    // 注册SpringValueProcessor 它负责加载所有的SpringValue，解析@Value
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, SpringValueProcessor.class.getName(),
         SpringValueProcessor.class);
 
-    // 注册SpringValueDefinitionProcessor
+    // 注册SpringValueDefinitionProcessor，用于xml配置的bean
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, SpringValueDefinitionProcessor.class.getName(),
         SpringValueDefinitionProcessor.class);
 
-    // 注册ApolloJsonValueProcessor
+    // 注册ApolloJsonValueProcessor，解析@ApolloJsonValue
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, ApolloJsonValueProcessor.class.getName(),
         ApolloJsonValueProcessor.class);
   }

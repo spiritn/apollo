@@ -81,16 +81,19 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
     if (environment.getPropertySources()
         .contains(PropertySourcesConstants.APOLLO_BOOTSTRAP_PROPERTY_SOURCE_NAME)) {
 
+      // ApolloBootstrapPropertySources是在ApolloApplicationContextInitializer加入的，加载的是配置文件指定的namespace
       // ensure ApolloBootstrapPropertySources is still the first
       ensureBootstrapPropertyPrecedence(environment);
 
       environment.getPropertySources()
           .addAfter(PropertySourcesConstants.APOLLO_BOOTSTRAP_PROPERTY_SOURCE_NAME, composite);
     } else {
+      // 如果配置文件没有指定namespace，则@EnableApolloConfig里的namespace为第一个
       environment.getPropertySources().addFirst(composite);
     }
   }
 
+  // 为什么要确保APOLLO_BOOTSTRAP_PROPERTY_SOURCE_NAME的PropertySource为第一个呢？？
   private void ensureBootstrapPropertyPrecedence(ConfigurableEnvironment environment) {
     MutablePropertySources propertySources = environment.getPropertySources();
 

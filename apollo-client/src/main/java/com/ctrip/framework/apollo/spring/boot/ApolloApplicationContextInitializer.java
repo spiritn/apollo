@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * Initialize apollo system properties and inject the Apollo config in Spring Boot bootstrap phase
- * 在容器启动阶段 初始化apollo系统属性和注入配置文件值
+ * 在容器启动阶段 初始化apollo系统属性和注入config
  *
  * <p>Configuration example:</p>
  * <pre class="code">

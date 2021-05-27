@@ -104,6 +104,7 @@ public class RemoteConfigLongPollService {
     return added;
   }
 
+  // 开启长轮询
   private void startLongPolling() {
     // RemoteConfigLongPollService只有一个，而RemoteConfigRepository有多个都会来调用本方法
     if (!m_longPollStarted.compareAndSet(false, true)) {
@@ -119,6 +120,7 @@ public class RemoteConfigLongPollService {
       m_longPollingService.submit(new Runnable() {
         @Override
         public void run() {
+          // 初次sleep2秒后，再开启轮询
           if (longPollingInitialDelayInMills > 0) {
             try {
               logger.debug("Long polling will start in {} ms.", longPollingInitialDelayInMills);
@@ -147,6 +149,7 @@ public class RemoteConfigLongPollService {
   private void doLongPollingRefresh(String appId, String cluster, String dataCenter, String secret) {
     final Random random = new Random();
     ServiceDTO lastServiceDto = null;
+    // 循环不停执行，直到接受到停止信号，或者接收到线程中断信号
     while (!m_longPollingStopped.get() && !Thread.currentThread().isInterrupted()) {
       if (!m_longPollRateLimiter.tryAcquire(5, TimeUnit.SECONDS)) {
         //wait at most 5 seconds
@@ -161,6 +164,7 @@ public class RemoteConfigLongPollService {
         // 如果lastServiceDto不为空，就用上次的config服务地址。否则随机选取一个，实现负载均衡
         if (lastServiceDto == null) {
           List<ServiceDTO> configServices = getConfigServices();
+          // list中随机取一个 random.nextInt
           lastServiceDto = configServices.get(random.nextInt(configServices.size()));
         }
 
@@ -169,7 +173,7 @@ public class RemoteConfigLongPollService {
         logger.debug("Long polling from {}", url);
 
         HttpRequest request = new HttpRequest(url);
-        // 客户端的过期时间
+        // 设置客户端的过期时间 90秒。服务端会60内返回。这里也是服务端不能超过90秒的原因
         request.setReadTimeout(LONG_POLLING_READ_TIMEOUT);
         if (!StringUtils.isBlank(secret)) {
           Map<String, String> headers = Signature.buildHttpHeaders(url, appId, secret);
@@ -182,6 +186,7 @@ public class RemoteConfigLongPollService {
         final HttpResponse<List<ApolloConfigNotification>> response = m_httpUtil.doGet(request, m_responseType);
         logger.debug("Long polling response: {}, url: {}", response.getStatusCode(), url);
 
+        // 200表示有配置更新
         if (response.getStatusCode() == 200 && response.getBody() != null) {
           updateNotifications(response.getBody());
           updateRemoteNotifications(response.getBody());
@@ -190,8 +195,9 @@ public class RemoteConfigLongPollService {
           notify(lastServiceDto, response.getBody());
         }
 
-        //try to load balance 客户端就这样实现负载均衡的？
+        //try to load balance
         if (response.getStatusCode() == 304 && random.nextBoolean()) {
+          // 随机重置lastServiceDto， 客户端就这样实现负载均衡的？
           lastServiceDto = null;
         }
 

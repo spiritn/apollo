@@ -27,6 +27,9 @@ public class DefaultConfigPropertySourcesProcessorHelper implements ConfigProper
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, PropertySourcesPlaceholderConfigurer.class.getName(),
         PropertySourcesPlaceholderConfigurer.class, propertySourcesPlaceholderPropertyValues);
 
+    // 这里和DefaultApolloConfigRegistrarHelper的区别是少注册一个PropertySourcesProcessor，
+    // 因为在ApolloApplicationContextInitializer已经配置了PropertySource
+
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, ApolloAnnotationProcessor.class.getName(),
         ApolloAnnotationProcessor.class);
     BeanRegistrationUtil.registerBeanDefinitionIfNotExists(registry, SpringValueProcessor.class.getName(),

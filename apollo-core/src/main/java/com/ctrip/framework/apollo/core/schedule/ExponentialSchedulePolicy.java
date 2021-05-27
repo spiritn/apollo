@@ -20,9 +20,11 @@ public class ExponentialSchedulePolicy implements SchedulePolicy {
     if (delayTime == 0) {
       delayTime = delayTimeLowerBound;
     } else {
+      // 翻倍增加，直到上限
       delayTime = Math.min(lastDelayTime << 1, delayTimeUpperBound);
     }
 
+    // 最后延迟时间
     lastDelayTime = delayTime;
 
     return delayTime;

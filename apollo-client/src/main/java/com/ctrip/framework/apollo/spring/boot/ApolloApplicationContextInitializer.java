@@ -77,6 +77,7 @@ public class ApolloApplicationContextInitializer implements
     public void initialize(ConfigurableApplicationContext context) {
         ConfigurableEnvironment environment = context.getEnvironment();
 
+        // 需要配置文件开启apollo.bootstrap.enabled = true
         if (!environment.getProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED, Boolean.class, false)) {
             logger.debug("Apollo bootstrap config is not enabled for context {}, see property: ${{}}", context, PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED);
             return;
@@ -111,7 +112,7 @@ public class ApolloApplicationContextInitializer implements
             composite.addPropertySource(configPropertySourceFactory.getConfigPropertySource(namespace, config));
         }
 
-        // 把所有的配置值添加到Spring的environment的PropertySources，
+        // 把所有的配置值添加到Spring的environment的PropertySources
         environment.getPropertySources().addFirst(composite);
     }
 

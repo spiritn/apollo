@@ -55,10 +55,14 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
   private final ConfigServiceLocator m_serviceLocator;
   private final HttpUtil m_httpUtil;
   private final ConfigUtil m_configUtil;
+  // 负责实际长轮询
   private final RemoteConfigLongPollService remoteConfigLongPollService;
+  // 缓存ApolloConfig，AtomicReference修饰保证及时更新
   private volatile AtomicReference<ApolloConfig> m_configCache;
   private final String m_namespace;
   private final static ScheduledExecutorService m_executorService;
+
+  // 表示configService的地址，长轮询接收到更新后要再去获取配置
   private final AtomicReference<ServiceDTO> m_longPollServiceDto;
   private final AtomicReference<ApolloNotificationMessages> m_remoteMessages;
   private final RateLimiter m_loadConfigRateLimiter;
@@ -94,7 +98,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     this.trySync();
     // 每隔5分钟的定时拉取
     this.schedulePeriodicRefresh();
-    // 就是这里触发的客户端进行长轮询定时任务
+    // 注册自己到remoteConfigLongPollService，触发的客户端进行长轮询定时任务
     this.scheduleLongPollingRefresh();
   }
 
@@ -188,27 +192,33 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     String dataCenter = m_configUtil.getDataCenter();
     String secret = m_configUtil.getAccessKeySecret();
     Tracer.logEvent("Apollo.Client.ConfigMeta", STRING_JOINER.join(appId, cluster, m_namespace));
+    // 如果为需要强制更新，尝试两次
     int maxRetries = m_configNeedForceRefresh.get() ? 2 : 1;
     long onErrorSleepTime = 0; // 0 means no sleep
     Throwable exception = null;
 
     List<ServiceDTO> configServices = getConfigServices();
     String url = null;
+    // 注意这里的双层循环
     for (int i = 0; i < maxRetries; i++) {
       List<ServiceDTO> randomConfigServices = Lists.newLinkedList(configServices);
       Collections.shuffle(randomConfigServices);
       //Access the server which notifies the client first
       if (m_longPollServiceDto.get() != null) {
+        // 优先访问通知配置变更的 Config Service 的地址。并且，获取到时，需要置空，避免重复优先访问
         randomConfigServices.add(0, m_longPollServiceDto.getAndSet(null));
       }
 
+      // 一次遍历所有的ServiceDTO，直到成功
       for (ServiceDTO configService : randomConfigServices) {
+
         if (onErrorSleepTime > 0) {
           logger.warn(
               "Load config failed, will retry in {} {}. appId: {}, cluster: {}, namespaces: {}",
               onErrorSleepTime, m_configUtil.getOnErrorRetryIntervalTimeUnit(), appId, cluster, m_namespace);
 
           try {
+            // 每次失败都会sleep一段时间，再去获取
             m_configUtil.getOnErrorRetryIntervalTimeUnit().sleep(onErrorSleepTime);
           } catch (InterruptedException e) {
             //ignore
@@ -270,6 +280,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
           transaction.complete();
         }
 
+        // 走到这里说明获取失败了，如果是强制更新，就只sleep1秒，否则sleep较长时间
         // if force refresh, do normal sleep, if normal config load, do exponential sleep
         onErrorSleepTime = m_configNeedForceRefresh.get() ? m_configUtil.getOnErrorRetryInterval() :
             m_loadConfigFailSchedulePolicy.fail();
@@ -339,6 +350,10 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
     });
   }
 
+  /**
+   * 获取所有的ConfigService地址
+   * @return
+   */
   private List<ServiceDTO> getConfigServices() {
     List<ServiceDTO> services = m_serviceLocator.getConfigServices();
     if (services.size() == 0) {

@@ -24,8 +24,11 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DefaultConfig extends AbstractConfig implements RepositoryChangeListener {
   private static final Logger logger = LoggerFactory.getLogger(DefaultConfig.class);
   private final String m_namespace;
+  // 拉取项目路径下的配置文件
   private final Properties m_resourceProperties;
+  // 缓存属性
   private final AtomicReference<Properties> m_configProperties;
+
   private final ConfigRepository m_configRepository;
   private final RateLimiter m_warnLogRateLimiter;
 
@@ -48,12 +51,14 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
 
   private void initialize() {
     try {
+      // 先从Repository获取属性缓存起来
       updateConfig(m_configRepository.getConfig(), m_configRepository.getSourceType());
     } catch (Throwable ex) {
       Tracer.logError(ex);
       logger.warn("Init Apollo Local Config failed - namespace: {}, reason: {}.",
           m_namespace, ExceptionUtil.getDetailMessage(ex));
     } finally {
+      // 把自己注册到remoteRepository，监听其变更消息
       //register the change listener no matter config repository is working or not
       //so that whenever config repository is recovered, config could get changed
       m_configRepository.addChangeListener(this);
@@ -78,6 +83,7 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
 
     /**
      * step 3: check env variable, i.e. PATH=...
+     * 大小写敏感
      * normally system environment variables are in UPPERCASE, however there might be exceptions.
      * so the caller should provide the key in the right case
      */
@@ -103,6 +109,7 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
 
   @Override
   public Set<String> getPropertyNames() {
+    // 看这就是从内存m_configProperties读取配置
     Properties properties = m_configProperties.get();
     if (properties == null) {
       return Collections.emptySet();
@@ -215,6 +222,9 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
     return actualChanges.build();
   }
 
+  /**
+   * 如何获取classpath下文件内容！！
+   */
   private Properties loadFromResource(String namespace) {
     String name = String.format("META-INF/config/%s.properties", namespace);
     InputStream in = ClassLoaderUtil.getLoader().getResourceAsStream(name);

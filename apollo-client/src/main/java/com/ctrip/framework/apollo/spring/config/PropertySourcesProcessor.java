@@ -69,7 +69,7 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
       for (String namespace : NAMESPACE_NAMES.get(order)) {
         // 获取namespace对应的config
         Config config = ConfigService.getConfig(namespace);
-        //
+        // 把所有config包装成ConfigPropertySource,注册到environment Spring的PropertySources体系中
         composite.addPropertySource(configPropertySourceFactory.getConfigPropertySource(namespace, config));
       }
     }
@@ -78,6 +78,7 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
     NAMESPACE_NAMES.clear();
 
     // add after the bootstrap property source or to the first
+    // 也就是配置文件指定的namespace优先？？
     if (environment.getPropertySources()
         .contains(PropertySourcesConstants.APOLLO_BOOTSTRAP_PROPERTY_SOURCE_NAME)) {
 
@@ -93,7 +94,6 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
     }
   }
 
-  // 为什么要确保APOLLO_BOOTSTRAP_PROPERTY_SOURCE_NAME的PropertySource为第一个呢？？
   private void ensureBootstrapPropertyPrecedence(ConfigurableEnvironment environment) {
     MutablePropertySources propertySources = environment.getPropertySources();
 

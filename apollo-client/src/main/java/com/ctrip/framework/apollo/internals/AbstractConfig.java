@@ -42,10 +42,13 @@ public abstract class AbstractConfig implements Config {
 
   private static final ExecutorService m_executorService;
 
+  // ConfigChangeListener的集合，包含用户自己实现的
   private final List<ConfigChangeListener> m_listeners = Lists.newCopyOnWriteArrayList();
   private final Map<ConfigChangeListener, Set<String>> m_interestedKeys = Maps.newConcurrentMap();
   private final Map<ConfigChangeListener, Set<String>> m_interestedKeyPrefixes = Maps.newConcurrentMap();
+
   private final ConfigUtil m_configUtil;
+
   private volatile Cache<String, Integer> m_integerCache;
   private volatile Cache<String, Long> m_longCache;
   private volatile Cache<String, Short> m_shortCache;
@@ -56,7 +59,10 @@ public abstract class AbstractConfig implements Config {
   private volatile Cache<String, Date> m_dateCache;
   private volatile Cache<String, Long> m_durationCache;
   private final Map<String, Cache<String, String[]>> m_arrayCache;
+  // 保存上面所有的cache
   private final List<Cache> allCaches;
+
+  // 用来表示每个config当前的版本号
   private final AtomicLong m_configVersion; //indicate config version
 
   protected PropertiesFactory propertiesFactory;
@@ -104,6 +110,9 @@ public abstract class AbstractConfig implements Config {
     return m_listeners.remove(listener);
   }
 
+  /**
+   * 要注意这里的获取属性的逻辑，会放进缓存中
+   */
   @Override
   public Integer getIntProperty(String key, Integer defaultValue) {
     try {
@@ -114,7 +123,7 @@ public abstract class AbstractConfig implements Config {
           }
         }
       }
-
+      // 从缓存中拿
       return getValueFromCache(key, Functions.TO_INT_FUNCTION, m_integerCache, defaultValue);
     } catch (Throwable ex) {
       Tracer.logError(new ApolloConfigException(
@@ -397,12 +406,14 @@ public abstract class AbstractConfig implements Config {
 
   private <T> T getValueAndStoreToCache(String key, Function<String, T> parser, Cache<String, T> cache, T defaultValue) {
     long currentConfigVersion = m_configVersion.get();
+    // 从各种渠道获取value，这是由子类DefaultConfig来实现的
     String value = getProperty(key, null);
 
     if (value != null) {
       T result = parser.apply(value);
 
       if (result != null) {
+        // 注意这里，锁住当前config后再次判断，防止这中间有配置变更，调用了clearConfigCache升了版本。
         synchronized (this) {
           if (m_configVersion.get() == currentConfigVersion) {
             cache.put(key, result);
@@ -415,11 +426,16 @@ public abstract class AbstractConfig implements Config {
     return defaultValue;
   }
 
+  /**
+   * 所有的cache都这里创建的
+   */
   private <T> Cache<String, T> newCache() {
     Cache<String, T> cache = CacheBuilder.newBuilder()
-        .maximumSize(m_configUtil.getMaxConfigCacheSize())
+        .maximumSize(m_configUtil.getMaxConfigCacheSize()) // 最多500个
+        // 1分钟过期
         .expireAfterAccess(m_configUtil.getConfigCacheExpireTime(), m_configUtil.getConfigCacheExpireTimeUnit())
         .build();
+    // 保存到 allCaches
     allCaches.add(cache);
     return cache;
   }
@@ -434,16 +450,21 @@ public abstract class AbstractConfig implements Config {
           c.invalidateAll();
         }
       }
+      // 接受RepositoryChange后会来清空缓存并升级版本
       m_configVersion.incrementAndGet();
     }
   }
 
+  /**
+   * 模板方法，提取通知监听者的逻辑
+   */
   protected void fireConfigChange(final ConfigChangeEvent changeEvent) {
     for (final ConfigChangeListener listener : m_listeners) {
       // check whether the listener is interested in this change event
       if (!isConfigChangeListenerInterested(listener, changeEvent)) {
         continue;
       }
+      // 异步通知，
       m_executorService.submit(new Runnable() {
         @Override
         public void run() {
@@ -496,6 +517,10 @@ public abstract class AbstractConfig implements Config {
     return false;
   }
 
+  /**
+   * 根据新旧Properties计算出来ConfigChange，在增量变更通知时可以参考
+   * 如何计算哪些是ADDED, MODIFIED, DELETED
+   */
   List<ConfigChange> calcPropertyChanges(String namespace, Properties previous,
                                          Properties current) {
     if (previous == null) {
@@ -509,6 +534,7 @@ public abstract class AbstractConfig implements Config {
     Set<String> previousKeys = previous.stringPropertyNames();
     Set<String> currentKeys = current.stringPropertyNames();
 
+    // 这里可以参考下，挺有意思。使用Sets.difference来计算
     Set<String> commonKeys = Sets.intersection(previousKeys, currentKeys);
     Set<String> newKeys = Sets.difference(currentKeys, commonKeys);
     Set<String> removedKeys = Sets.difference(previousKeys, commonKeys);

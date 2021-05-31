@@ -108,7 +108,7 @@ public class ApolloApplicationContextInitializer implements
         for (String namespace : namespaceList) {
             // 经典的ConfigService.getConfig 获取某个配置文件的值
             Config config = ConfigService.getConfig(namespace);
-
+            // 把所有config包装成ConfigPropertySource,注册到environment Spring的PropertySources体系中
             composite.addPropertySource(configPropertySourceFactory.getConfigPropertySource(namespace, config));
         }
 

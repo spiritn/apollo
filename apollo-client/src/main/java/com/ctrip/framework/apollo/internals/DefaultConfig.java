@@ -185,6 +185,8 @@ public class DefaultConfig extends AbstractConfig implements RepositoryChangeLis
 
     //2. update m_configProperties
     updateConfig(newConfigProperties, sourceType);
+
+    // 这里来清除cache，并升级version
     clearConfigCache();
 
     //3. use getProperty to update configChange's new value and calc the final changes

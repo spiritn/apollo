@@ -1,5 +1,7 @@
 package com.ctrip.framework.apollo.demo.spring.springBootDemo.refresh;
 
+import com.ctrip.framework.apollo.Config;
+import com.ctrip.framework.apollo.ConfigService;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.demo.spring.springBootDemo.config.SampleRedisConfig;
 import com.ctrip.framework.apollo.model.ConfigChangeEvent;
@@ -36,6 +38,9 @@ public class SpringBootApolloRefreshConfig {
     public void onChange(ConfigChangeEvent changeEvent) {
         logger.info("before refresh {}", sampleRedisConfig.toString());
         logger.info("my.open,{}", open);
+        Config config = ConfigService.getAppConfig();
+        String timeout = config.getProperty("timeout", "23");
+        Integer integer = config.getIntProperty("timeout", 78);
         refreshScope.refresh("sampleRedisConfig");
         logger.info("after refresh {}", sampleRedisConfig.toString());
     }

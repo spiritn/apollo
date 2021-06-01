@@ -464,7 +464,7 @@ public abstract class AbstractConfig implements Config {
       if (!isConfigChangeListenerInterested(listener, changeEvent)) {
         continue;
       }
-      // 异步通知，
+      // 异步通知
       m_executorService.submit(new Runnable() {
         @Override
         public void run() {
